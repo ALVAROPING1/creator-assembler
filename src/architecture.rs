@@ -56,6 +56,9 @@ pub struct Architecture<'a> {
     /// Timer configuration
     #[serde(default)]
     pub timer: Option<Timer>,
+    /// Device configuration
+    #[serde(default)]
+    pub devices: Vec<Device<'a>>,
     /// Definitions of possible enumerated instruction fields
     #[serde(default)]
     pub enums: HashMap<&'a str, EnumDefinition<'a>>,
@@ -524,6 +527,28 @@ pub struct Timer {
     pub enable: String,
     /// JS code to be executed in order to disable timer
     pub disable: String,
+}
+
+#[derive(Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum DeviceClasses {
+    ConsoleDevice,
+    OSDriver,
+}
+
+#[derive(Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
+pub struct Device<'a> {
+    /// Device ID
+    pub id: &'a str,
+    /// Device class
+    pub cls: DeviceClasses,
+    /// Device's control register's address
+    pub ctrl_addr: usize,
+    /// Device's status register's address
+    pub status_addr: usize,
+    /// Device's data segment
+    pub data: NonEmptyRangeInclusive<BigUint>,
+    /// Device's default status (default: enabled)
+    pub enabled: Option<bool>,
 }
 
 impl Architecture<'_> {
