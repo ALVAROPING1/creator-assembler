@@ -508,8 +508,8 @@ pub struct Interrupts {
     /// return a boolean. Defaults to `is_global_enabled`
     pub is_enabled: Option<String>,
     /// JS code to check whether interrupts are globally is enabled. Must return
-    /// a boolean
-    pub is_global_enabled: String,
+    /// a boolean. If not specified, always returns `true`
+    pub is_global_enabled: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema, Debug, PartialEq, Eq, Clone)]
