@@ -136,10 +136,9 @@
 
 use chumsky::span::Span as _;
 use num_bigint::{BigInt, BigUint};
-use regex::{NoExpand, Regex};
+use regex::{regex, NoExpand};
 
 use std::collections::{HashMap, HashSet};
-use std::sync::LazyLock;
 
 use crate::architecture::{
     AlignmentType, Architecture, DirectiveAction, DirectiveData, DirectiveSegment, FieldType,
@@ -1148,14 +1147,14 @@ fn translate_instruction(
     // Surround the argument placeholder pattern (`[fF]([0-9]+)`) with word boundary assertions to
     // make sure we match a full identifier rather than part of one
     // SEE: https://docs.rs/regex/latest/regex/#empty-matches
-    static RE: LazyLock<Regex> = crate::regex!(r"\b{start-half}[fF]([0-9]+)\b{end-half}");
-    static FIELD: LazyLock<Regex> = crate::regex!("\0([0-9]+)");
+    let re = regex!(r"\b{start-half}[fF]([0-9]+)\b{end-half}");
+    let field_re = regex!("\0([0-9]+)");
     let def = inst.definition;
     let mut binary_instruction = BitField::new(ctx.arch.word_size().saturating_mul(def.nwords));
     // Replace the field placeholders in the translation spec with `\0N`. Since null bytes
     // shouldn't appear in the translation spec/register names, this avoids issues when a
     // placeholder is replaced with a register name with the same format as another placeholder
-    let mut translated_instruction = RE.replace_all(def.syntax.output_syntax, "\0$1").to_string();
+    let mut translated_instruction = re.replace_all(def.syntax.output_syntax, "\0$1").to_string();
     for arg in inst.args {
         let field = &def.syntax.fields[arg.field_idx];
         let span = arg.value.1;
@@ -1168,7 +1167,7 @@ fn translate_instruction(
         binary_instruction
             .replace(&field.range, value, signed)
             .add_span(span)?;
-        translated_instruction = FIELD
+        translated_instruction = field_re
             .replace(&translated_instruction, NoExpand(&value_str))
             .to_string();
     }

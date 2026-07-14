@@ -22,10 +22,9 @@
 //! The main entry point is the [`Instruction`] type
 
 use chumsky::{input::MappedInput, prelude::*};
-use regex::Regex;
+use regex::regex;
 
 use std::fmt::Write;
-use std::sync::LazyLock;
 
 use super::{expression, expression::Expr, lexer, ParseError, Span, Spanned, Token};
 use crate::architecture::{FieldType, InstructionField};
@@ -92,9 +91,9 @@ impl Instruction {
     /// Errors if the syntax specification is invalid
     #[allow(clippy::missing_panics_doc)] // Function should never panic
     pub fn build<T>(fmt: &str, fields: &[InstructionField<T>]) -> Result<Self, &'static str> {
-        // Regex for a instruction argument placeholder
-        static FIELD: LazyLock<Regex> = crate::regex!(r"^[fF][0-9]+$");
         static WRITE_EXPECT: &str = "Writing to an in-memory vector can't fail";
+        // Regex for a instruction argument placeholder
+        let field_re = regex!(r"^[fF][0-9]+$");
 
         // Gets the field number the placeholder points to and validates that it has a correct type
         let field = |ident: String, no_co: bool| -> Result<usize, _> {
@@ -127,7 +126,7 @@ impl Instruction {
         let mut parser = parser
             .to(match tokens.next() {
                 // First token is a placeholder => check that it points to the opcode field
-                Some(Token::Identifier(ident)) if FIELD.is_match(&ident) => {
+                Some(Token::Identifier(ident)) if field_re.is_match(&ident) => {
                     let i = field(ident, false)?;
                     match fields[i].r#type {
                         FieldType::Co => {
@@ -159,7 +158,7 @@ impl Instruction {
             // Append the current token parser to the parser being created
             parser = match token {
                 // The current token is an argument placeholder => parse an expression/identifier
-                Token::Identifier(ident) if FIELD.is_match(&ident) => {
+                Token::Identifier(ident) if field_re.is_match(&ident) => {
                     let field_idx = field(ident, true)?; // Validate the field pointed to
                     if !prev_symbol {
                         syntax.push(' ');

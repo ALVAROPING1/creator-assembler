@@ -70,15 +70,3 @@ pub mod prelude {
 }
 
 use error_rendering::RenderError;
-
-/// Builds a new lazily-initialized regex with a given literal string
-///
-/// # Panics
-///
-/// Panics if the literal string isn't a valid regex
-macro_rules! build_regex {
-    ($re:expr) => {
-        LazyLock::new(|| Regex::new($re).expect("All regexes should compile"))
-    };
-}
-use build_regex as regex;

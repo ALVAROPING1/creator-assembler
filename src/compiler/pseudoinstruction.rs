@@ -27,10 +27,9 @@
 // definition of the architecture
 
 use num_bigint::{BigInt, BigUint};
-use regex::{Captures, Regex};
+use regex::{regex, Captures};
 
 use std::fmt::Write as _;
-use std::sync::LazyLock;
 
 use crate::architecture::Pseudoinstruction;
 use crate::number::Number;
@@ -228,17 +227,17 @@ pub fn expand<'arch>(
     // Regex used
     // Gets the value of the i-th argument from bits j to k, evaluating the argument as the given
     // type
-    static FIELD_VALUE: LazyLock<Regex> = crate::regex!(r"Field\.(\d+)\.\((\d+),(\d+)\)\.(\w+)");
+    let field_value_re = regex!(r"Field\.(\d+)\.\((\d+),(\d+)\)\.(\w+)");
     // Gets the size of the i-th argument
-    static FIELD_SIZE: LazyLock<Regex> = crate::regex!(r"Field\.(\d+)\.SIZE");
+    let field_size_re = regex!(r"Field\.(\d+)\.SIZE");
     // Gets the register name of the i-th argument
-    static REG_NAME: LazyLock<Regex> = crate::regex!(r"reg_name\{(\d+)\}");
+    let reg_name_re = regex!(r"reg_name\{(\d+)\}");
     // Evaluates a `JS` expression that doesn't return a value
-    static NO_RET_OP: LazyLock<Regex> = crate::regex!(r"no_ret_op\{([^}]*?)\};");
+    let no_ret_op_re = regex!(r"no_ret_op\{([^}]*?)\};");
     // Evaluates a `JS` expression should be replaced with its return value
-    static OP: LazyLock<Regex> = crate::regex!(r"op\{([^}]*?)\}");
+    let op_re = regex!(r"op\{([^}]*?)\}");
     // Block of code containing a list of instructions
-    static INSTRUCTIONS: LazyLock<Regex> = crate::regex!(r"\{(.*?)\}");
+    let instructions_re = regex!(r"\{(.*?)\}");
 
     // Function to evaluate a label within an expression
     let ident_eval = |label: &str| super::label_eval(&ctx.label_table, address, label);
@@ -262,7 +261,7 @@ pub fn expand<'arch>(
     let mods = &arch.modifiers;
 
     // Replace occurrences of `Field.number`
-    while let Some(x) = FIELD_VALUE.captures(&def) {
+    while let Some(x) = field_value_re.captures(&def) {
         let (_, [arg, start_bit, end_bit, ty]) = x.extract();
         let arg_num = num(arg) - 1;
         // Get the user's argument expression
@@ -348,7 +347,7 @@ pub fn expand<'arch>(
     }
 
     // Replace occurrences of `Field.size`
-    while let Some(x) = FIELD_SIZE.captures(&def) {
+    while let Some(x) = field_size_re.captures(&def) {
         let (_, [arg]) = x.extract();
         let arg_num = num(arg) - 1;
         // Get the user's argument expression
@@ -376,7 +375,7 @@ pub fn expand<'arch>(
     }
 
     // Replace occurrences of `reg_name`
-    while let Some(x) = REG_NAME.captures(&def) {
+    while let Some(x) = reg_name_re.captures(&def) {
         let (_, [arg]) = x.extract();
         let arg_num = num(arg) - 1;
         // Get the user's argument expression
@@ -406,7 +405,7 @@ pub fn expand<'arch>(
     }
 
     // Evaluate occurrences of `no_ret_op{}`
-    while let Some(x) = NO_RET_OP.captures(&def) {
+    while let Some(x) = no_ret_op_re.captures(&def) {
         let (_, [code]) = x.extract();
         js::eval_fn(code).map_err(|error| {
             Error {
@@ -420,7 +419,7 @@ pub fn expand<'arch>(
     }
 
     // Evaluate and replace occurrences of `op{}`
-    while let Some(x) = OP.captures(&def) {
+    while let Some(x) = op_re.captures(&def) {
         let (_, [code]) = x.extract();
         let result = js::eval_expr(code).map_err(|error| {
             Error {
@@ -436,7 +435,7 @@ pub fn expand<'arch>(
     // Wrap instruction sequences in quotes and with a return statement, so we can treat the
     // definition code as the body of a function
     let mut start = 0;
-    while let Some(x) = INSTRUCTIONS.captures_at(&def, start) {
+    while let Some(x) = instructions_re.captures_at(&def, start) {
         let (_, [instructions]) = x.extract();
         let replacement = format!("{{return \"{instructions}\"}}");
         let range = capture_span(&x, 0);
