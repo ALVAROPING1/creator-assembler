@@ -207,7 +207,8 @@ pub struct Instruction<'a> {
     // modifying the data on deserialization
     pub definition: String,
     /// Properties of the instruction
-    pub properties: Option<Vec<InstructionProperties>>,
+    #[serde(default)]
+    pub properties: Vec<InstructionProperties>,
 }
 
 /// Allowed instruction types
@@ -340,7 +341,8 @@ pub struct Pseudoinstruction<'a> {
     // modifying the data on deserialization
     pub definition: String,
     /// Properties of the instruction
-    pub properties: Option<Vec<InstructionProperties>>,
+    #[serde(default)]
+    pub properties: Vec<InstructionProperties>,
 }
 
 /// Directive specification
