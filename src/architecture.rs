@@ -51,10 +51,8 @@ pub struct Architecture<'a> {
     /// Memory layout of the architecture
     pub memory_layout: MemoryLayout,
     /// Interrupt configuration
-    #[serde(default)]
     pub interrupts: Option<Interrupts>,
     /// Timer configuration
-    #[serde(default)]
     pub timer: Option<Timer>,
     /// Device configuration
     #[serde(default)]
@@ -155,7 +153,6 @@ pub struct Register<'a> {
     /// Current value of the register
     pub value: Number,
     /// Default value of the register
-    #[serde(default)]
     pub default_value: Option<Number>,
     /// Properties of this register
     pub properties: Vec<RegisterProperty>,
