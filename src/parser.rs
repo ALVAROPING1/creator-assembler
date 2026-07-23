@@ -104,14 +104,16 @@ where
     // Identifiers
     let ident = select_ref! { Token::Identifier(ident) = e => (ident.clone(), e.span())}
         .labelled("identifier");
-    let label = select_ref! { Token::Label(name) = e => (name.clone(), e.span())}
-        .padded_by(newline().repeated())
-        .labelled("label");
+    let label = select_ref! { Token::Label(name) = e => (name.clone(), e.span())}.labelled("label");
     let directive_name = select_ref! { Token::Directive(name) = e => (name.clone(), e.span())}
         .labelled("directive name");
 
-    // Any amount of labels: `labels -> label*`
-    let labels = label.repeated().collect().labelled("labels");
+    // Any amount of labels: `labels -> (label \n*)*`
+    let labels = label
+        .separated_by(newline().repeated())
+        .allow_trailing() // Leading isn't needed because they are consumed by the statement separator
+        .collect()
+        .labelled("labels");
 
     // Directive statement:
     // `directive -> (directive_name \n)
