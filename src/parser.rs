@@ -115,33 +115,35 @@ where
         .collect()
         .labelled("labels");
 
+    // Mapping function for wrapping repeated/separated parsers with a span
+    macro_rules! span_repeated {
+        ($dst:ident = $src:ident) => {
+            |x: Vec<_>, e| {
+                let mut s: Span = e.span();
+                if x.is_empty() {
+                    // Fix the span being wrong when there are no elements (when sub-parser doesn't
+                    // consume input). SEE: <https://github.com/zesterer/chumsky/issues/870>
+                    s.$dst = s.$src;
+                }
+                (x, s)
+            }
+        };
+    }
+
     // Directive statement:
-    // `directive -> (directive_name \n)
-    //             | (directive_name expression (\n* , \n* expression)* \n)`
+    // `directive -> (directive_name (expression (\n* , \n* expression)*)?)`
     let directive = directive_name
         .then(
-            // Arguments of the directive. Comma-separated list of expressions. Each expression can
-            // have any amount of newlines prefixing it except the first (to avoid ambiguities in
-            // cases where a directive without arguments is followed by an instruction), and any
-            // amount of newlines following it if they are followed by a comma (indicating that more
-            // expressions will follow, otherwise a single newline is required as the statement end)
-            newline()
-                .map_with(|_, e| {
-                    let mut s: Span = e.span();
-                    // Don't include the newline in the span. We need to do this manually here
-                    // because getting the span after `.rewind()` gives the wrong span
-                    s.end = s.start;
-                    (Vec::new(), s)
-                })
-                .rewind()
-                .or(expression::parser()
-                    .map(|(expr, _)| Data::Number(expr))
-                    .or(select_ref! { Token::String(s) => Data::String(s.clone()) }
-                        .labelled("string"))
-                    .map_with(|x, e| (x, e.span()))
-                    .separated_by(just(Token::Ctrl(',')).padded_by(newline().repeated()))
-                    .collect()
-                    .map_with(|x, e| (x, e.span()))),
+            // Arguments of the directive. Comma-separated list of expressions, where each comma can
+            // be padded by any amount of newlines (this avoids ambiguities with following
+            // instructions as the comma indicates there should be more expressions)
+            expression::parser()
+                .map(|(expr, _)| Data::Number(expr))
+                .or(select_ref! { Token::String(s) => Data::String(s.clone()) }.labelled("string"))
+                .map_with(|x, e| (x, e.span()))
+                .separated_by(just(Token::Ctrl(',')).padded_by(newline().repeated()))
+                .collect()
+                .map_with(span_repeated!(end = start)),
         )
         .map(|(name, args)| Statement::Directive(DirectiveNode { name, args }))
         .labelled("directive");
@@ -153,15 +155,7 @@ where
                 .map_with(|token, e| (token, e.span()))
                 .repeated()
                 .collect()
-                .map_with(|args: Vec<_>, e| {
-                    // Fix the span being wrong when there are no arguments (when sub-parser doesn't
-                    // consume input). SEE: <https://github.com/zesterer/chumsky/issues/870>
-                    let mut s: Span = e.span();
-                    if args.is_empty() {
-                        s.start = s.end;
-                    }
-                    (args, s)
-                }),
+                .map_with(span_repeated!(start = end)),
         )
         .map(|(name, args)| Statement::Instruction(InstructionNode { name, args }))
         .labelled("instruction");
