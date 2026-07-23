@@ -683,8 +683,7 @@ impl Architecture<'_> {
 }
 
 impl RegisterFile<'_> {
-    /// Finds the register with the given name, returning its index in its register file, the
-    /// register definition, and the name that matched
+    /// Finds the register with the given name, returning its definition and the name that matched
     ///
     /// # Parameters
     ///
