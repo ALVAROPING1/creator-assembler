@@ -180,8 +180,8 @@ impl Expr {
                     BinaryOp::Le => to_int(lhs <= rhs, -1),
                     BinaryOp::Ne => to_int(lhs.partial_cmp(&rhs) != Some(Ordering::Equal), -1),
                     BinaryOp::Eq => to_int(lhs.partial_cmp(&rhs) == Some(Ordering::Equal), -1),
-                    BinaryOp::LogicalAnd => to_int(lhs.to_bool() && rhs.to_bool(), 1),
-                    BinaryOp::LogicalOr => to_int(lhs.to_bool() || rhs.to_bool(), 1),
+                    BinaryOp::LogicalAnd => to_int(bool::from(&lhs) && bool::from(&rhs), 1),
+                    BinaryOp::LogicalOr => to_int(bool::from(&lhs) || bool::from(&rhs), 1),
                     BinaryOp::Shl => (lhs << rhs).map_err(|e| replace_span(e, span)),
                     BinaryOp::Shr => (lhs >> rhs).map_err(|e| replace_span(e, span)),
                 }

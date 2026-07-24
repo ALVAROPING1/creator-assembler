@@ -99,6 +99,34 @@ impl TryFrom<Number> for BigUint {
     }
 }
 
+impl From<&Number> for f64 {
+    fn from(value: &Number) -> Self {
+        match value {
+            Number::Int(x) => x.to_f64().expect("Converting a bigint to f64 can't fail"),
+            Number::Float { value, .. } => *value,
+        }
+    }
+}
+
+impl From<&Number> for f32 {
+    fn from(value: &Number) -> Self {
+        match value {
+            Number::Int(x) => x.to_f32().expect("Converting a bigint to f32 can't fail"),
+            #[allow(clippy::cast_possible_truncation)]
+            Number::Float { value, .. } => *value as Self,
+        }
+    }
+}
+
+impl From<&Number> for bool {
+    fn from(value: &Number) -> Self {
+        match value {
+            Number::Int(x) => *x != BigInt::ZERO,
+            Number::Float { value, .. } => *value != 0.0,
+        }
+    }
+}
+
 impl ops::Neg for Number {
     type Output = Self;
 
@@ -139,7 +167,7 @@ macro_rules! impl_bin_op {
                     (Self::Int($lhs), Self::Int($rhs)) => Self::Int($int),
                     (lhs, rhs) => {
                         let $orig = lhs.combine_origin(&rhs);
-                        let _value = match (lhs.to_f64(), rhs.to_f64()) {
+                        let _value = match (f64::from(&lhs), f64::from(&rhs)) {
                             ($lhs, $rhs) => $float
                         };
                         #[allow(unreachable_code)]
@@ -211,31 +239,6 @@ impl_bin_op!(ops::Shl, shl, shift <<, OperationKind::Shl);
 impl_bin_op!(ops::Shr, shr, shift >>, OperationKind::Shr);
 
 impl Number {
-    /// Converts this number to a [`f64`]
-    pub fn to_f64(&self) -> f64 {
-        match self {
-            Self::Int(x) => x.to_f64().expect("Converting a bigint to f64 can't fail"),
-            Self::Float { value, .. } => *value,
-        }
-    }
-
-    /// Converts this number to a [`f32`]
-    pub fn to_f32(&self) -> f32 {
-        match self {
-            Self::Int(x) => x.to_f32().expect("Converting a bigint to f32 can't fail"),
-            #[allow(clippy::cast_possible_truncation)]
-            Self::Float { value, .. } => *value as f32,
-        }
-    }
-
-    /// Converts this number to a [`bool`]
-    pub fn to_bool(&self) -> bool {
-        match self {
-            Self::Int(x) => *x != BigInt::ZERO,
-            Self::Float { value, .. } => *value != 0.0,
-        }
-    }
-
     /// Applies a modifier to this number, taking a slice of bits from it, manipulating it as
     /// specified, and returning it as an integer
     pub fn modify(self, modifier: Modifier) -> Self {
@@ -267,7 +270,7 @@ impl PartialOrd for Number {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match (self, other) {
             (Self::Int(lhs), Self::Int(rhs)) => Some(lhs.cmp(rhs)),
-            (lhs, rhs) => lhs.to_f64().partial_cmp(&rhs.to_f64()),
+            (lhs, rhs) => f64::from(lhs).partial_cmp(&f64::from(rhs)),
         }
     }
 }
@@ -290,22 +293,20 @@ mod test {
     #[test]
     #[allow(clippy::float_cmp)]
     fn to_float() {
-        assert_eq!(Number::Int(123.into()).to_f64(), 123.0);
+        assert_eq!(f64::from(&Number::Int(123.into())), 123.0);
         assert_eq!(
-            Number::Float {
+            f64::from(&Number::Float {
                 value: 101.5,
                 origin: (0..0).span()
-            }
-            .to_f64(),
+            }),
             101.5
         );
-        assert_eq!(Number::Int(123.into()).to_f32(), 123.0);
+        assert_eq!(f32::from(&Number::Int(123.into())), 123.0);
         assert_eq!(
-            Number::Float {
+            f32::from(&Number::Float {
                 value: 101.5,
                 origin: (0..0).span()
-            }
-            .to_f32(),
+            }),
             101.5
         );
     }
@@ -340,24 +341,21 @@ mod test {
 
     #[test]
     fn to_bool() {
-        assert!(Number::Int(123.into()).to_bool());
-        assert!(!Number::Int(0.into()).to_bool());
-        assert!(Number::Int((-1).into()).to_bool());
-        assert!(Number::Float {
+        assert!(bool::from(&Number::Int(123.into())));
+        assert!(!bool::from(&Number::Int(0.into())));
+        assert!(bool::from(&Number::Int((-1).into())));
+        assert!(bool::from(&Number::Float {
             value: 101.5,
             origin: (1..3).span()
-        }
-        .to_bool());
-        assert!(Number::Float {
+        }));
+        assert!(bool::from(&Number::Float {
             value: -1.5,
             origin: (3..5).span()
-        }
-        .to_bool());
-        assert!(!Number::Float {
+        }));
+        assert!(!bool::from(&Number::Float {
             value: 0.0,
             origin: (1..3).span()
-        }
-        .to_bool());
+        }));
     }
 
     #[test]
