@@ -473,20 +473,32 @@ pub fn expand<'arch>(
         .split(|(t, _)| *t == Token::Literal(';'))
         .filter(|t| !t.is_empty()) // split leaves an empty element after the last `;`
         .map(|tokens| {
+            fn replace(expr: &mut Expr, f: impl Copy + Fn(&str) -> Option<Expr>) {
+                match expr {
+                    // TODO: collapse if let guard when raising MSRV
+                    Expr::Identifier((ident, _)) => {
+                        if let Some(rep) = f(ident) {
+                            *expr = rep;
+                        }
+                    }
+                    Expr::UnaryOp { operand, .. } => replace(&mut operand.0, f),
+                    Expr::BinaryOp { lhs, rhs, .. } => {
+                        replace(&mut lhs.0, f);
+                        replace(&mut rhs.0, f);
+                    }
+                    _ => {}
+                }
+            }
             let (name, args) = crate::parser::Instruction::parse_name((def.len(), file_id), tokens)
                 .map_err(parse_err)?;
             let span = chumsky::span::Span::new(file_id, name.1.start..args.1.end);
             // Parse the instruction
             let (inst_def, mut args) = super::parse_instruction(arch, name, args)?;
-            // Replace the argument names that match those of the pseudoinstruction being expanded
-            // with the values provided by the user
+            // Replace the identifiers that match the name of an argument with their value
             for arg in &mut args {
-                let value = &arg.value;
-                if let Expr::Identifier((ident, _)) = &value.0 {
-                    if let Some(pseudoinstruction_arg) = get_arg(ident) {
-                        arg.value.0 = pseudoinstruction_arg.value.0.clone();
-                    }
-                }
+                replace(&mut arg.value.0, |ident| {
+                    get_arg(ident).map(|x| x.value.0.clone())
+                });
             }
             Ok(((inst_def, args), span))
         })
