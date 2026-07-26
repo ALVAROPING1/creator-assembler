@@ -20,7 +20,7 @@
 //! Module containing the definition of assembly labels and their symbol table
 
 use num_bigint::BigUint;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 use super::{ErrorData, ErrorKind};
 use crate::span::Span;

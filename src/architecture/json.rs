@@ -23,8 +23,8 @@
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use super::{utils, DirectiveAction};
 use super::{AlignmentType, FloatType, IntegerType, StringType};
+use super::{DirectiveAction, utils};
 use utils::NonEmptyRangeInclusive;
 
 /// Type of registers allowed
@@ -153,7 +153,9 @@ impl TryFrom<BitRange> for super::BitRange {
             (BitPosition::Single(msb), BitPosition::Single(lsb)) => vec![range((msb, lsb))?],
             (BitPosition::Multiple(msb), BitPosition::Multiple(lsb)) => {
                 if msb.len() != lsb.len() {
-                    return Err("the startbit and endbit fields must have the same length if they are vectors");
+                    return Err(
+                        "the startbit and endbit fields must have the same length if they are vectors",
+                    );
                 }
                 std::iter::zip(msb, lsb)
                     .map(range)

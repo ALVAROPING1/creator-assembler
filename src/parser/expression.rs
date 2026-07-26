@@ -27,7 +27,7 @@ use chumsky::{input::BorrowInput, prelude::*};
 use num_bigint::{BigInt, BigUint};
 use std::cmp::Ordering;
 
-use super::{lexer::Operator, Parser, Span, Spanned, Token};
+use super::{Parser, Span, Spanned, Token, lexer::Operator};
 use crate::architecture::ModifierDefinitions;
 use crate::compiler::error::SpannedErr;
 use crate::compiler::{ErrorData, ErrorKind};

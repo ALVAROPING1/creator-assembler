@@ -136,7 +136,7 @@
 
 use chumsky::span::Span as _;
 use num_bigint::{BigInt, BigUint};
-use regex::{regex, NoExpand};
+use regex::{NoExpand, regex};
 
 use std::collections::{HashMap, HashSet};
 
@@ -146,9 +146,9 @@ use crate::architecture::{
 };
 use crate::parser::instruction::{ParsedArgs, ParsedArgument};
 use crate::parser::{
-    Data as DataNode, Expr, InstructionNode, Statement as StatementNode, Token, AST,
+    AST, Data as DataNode, Expr, InstructionNode, Statement as StatementNode, Token,
 };
-use crate::span::{Range, Span, Spanned, DEFAULT_SPAN};
+use crate::span::{DEFAULT_SPAN, Range, Span, Spanned};
 
 mod label;
 pub use label::{Label, Table as LabelTable};
@@ -1070,7 +1070,7 @@ fn evaluate_instruction_field(
                         expected: ArgumentType::RegisterName,
                         found: ArgumentType::Expression,
                     }
-                    .add_span(arg.value.1))
+                    .add_span(arg.value.1));
                 }
             };
             // Convert the generic field type to an specific register type

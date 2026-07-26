@@ -189,7 +189,7 @@ where
 // correct types, since we can't specify them ourselves in a function signature
 macro_rules! parse_with {
     ($parser:expr, $comment_prefix:expr, $src:expr) => {{
-        use $crate::parser::{lexer, ParseError};
+        use $crate::parser::{ParseError, lexer};
         use $crate::span::FileID;
         let end = Span::new(FileID::SRC, $src.len()..$src.len());
         let src = $src.with_context(FileID::SRC);

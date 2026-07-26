@@ -1,7 +1,7 @@
 [package]
 name = "creator-assembler"
 version = "2.0.0"
-edition = "2021"
+edition = "2024"
 license = "LGPL-3.0-or-later"
 description = "A reimplementation of Creator (https://creatorsim.github.io/)'s assembler"
 categories = ["command-line-utilities", "compilers"]

@@ -28,8 +28,8 @@ use js_sys::BigInt;
 use self_cell::self_cell;
 use wasm_bindgen::prelude::*;
 
-use crate::architecture::{Architecture, Integer};
 use crate::RenderError;
+use crate::architecture::{Architecture, Integer};
 
 // Creates a hook for panics to improve error messages
 pub fn set_panic_hook() {

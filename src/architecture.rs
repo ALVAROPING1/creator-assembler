@@ -22,8 +22,8 @@
 //! The entry point for the specification is the [`Architecture`] struct
 
 use num_bigint::BigUint;
-use schemars::{schema_for, JsonSchema};
-use serde::{de::Error, Deserialize};
+use schemars::{JsonSchema, schema_for};
+use serde::{Deserialize, de::Error};
 use serde_json::Number;
 
 use std::collections::HashMap;
@@ -611,7 +611,10 @@ impl Architecture<'_> {
                 for range in &field.range.ranges {
                     let end = range.end();
                     if end >= size {
-                        let msg = format!("instruction `{}` contains fields out of bounds (size: {size}, field index: {end})", instruction.name);
+                        let msg = format!(
+                            "instruction `{}` contains fields out of bounds (size: {size}, field index: {end})",
+                            instruction.name
+                        );
                         return Err(serde_json::Error::custom(msg));
                     }
                 }

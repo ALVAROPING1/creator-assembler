@@ -22,7 +22,7 @@
 use num_bigint::BigUint;
 use num_traits::{Num as _, One as _};
 use schemars::JsonSchema;
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, de::Error};
 
 use core::{ops::RangeInclusive, str::FromStr};
 
@@ -41,7 +41,7 @@ impl JsonSchema for Integer {
     fn schema_id() -> std::borrow::Cow<'static, str> {
         std::borrow::Cow::Borrowed("Integer")
     }
-    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+    fn json_schema(_: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
         schemars::schema::SchemaObject {
             instance_type: Some(schemars::schema::InstanceType::Integer.into()),
             ..Default::default()
@@ -186,8 +186,8 @@ macro_rules! schema_from {
             <$src as JsonSchema>::schema_id()
         }
 
-        fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-            <$src as JsonSchema>::json_schema(gen)
+        fn json_schema(g: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+            <$src as JsonSchema>::json_schema(g)
         }
 
         fn is_referenceable() -> bool {

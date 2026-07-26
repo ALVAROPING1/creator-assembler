@@ -25,7 +25,7 @@ use num_bigint::{BigInt, BigUint};
 use num_traits::cast::ToPrimitive;
 
 use crate::architecture::Modifier;
-use crate::compiler::{error::OperationKind, ErrorKind};
+use crate::compiler::{ErrorKind, error::OperationKind};
 use crate::span::{Span, Spanned};
 
 /// Generic number type, either an integer or a floating-point number
@@ -279,7 +279,7 @@ impl PartialOrd for Number {
 #[allow(clippy::unwrap_used)]
 mod test {
     use super::*;
-    use crate::span::{test::*, DEFAULT_SPAN};
+    use crate::span::{DEFAULT_SPAN, test::*};
 
     impl From<Ranged<f64>> for Number {
         fn from(value: Ranged<f64>) -> Self {

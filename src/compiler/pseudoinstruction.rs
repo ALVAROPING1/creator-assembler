@@ -69,7 +69,7 @@ impl Error {
 
 #[cfg(feature = "pseudoinstructions")]
 mod js {
-    use js_sys::{wasm_bindgen::JsValue, Array, BigInt};
+    use js_sys::{Array, BigInt, wasm_bindgen::JsValue};
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
@@ -165,7 +165,7 @@ pub fn expand<'arch>(
     let def = &instruction.definition;
     let def = if let Some(body) = def.strip_prefix(JS_PREFIX) {
         if cfg!(feature = "pseudoinstructions") {
-            use js_sys::{wasm_bindgen::JsValue, Array};
+            use js_sys::{Array, wasm_bindgen::JsValue};
 
             let js_args: Array = args
                 .iter()
@@ -190,7 +190,9 @@ pub fn expand<'arch>(
                 .compile_error(instruction, span)
             })?
         } else {
-            unimplemented!("Evaluating js code during pseudoinstruction expansion requires the `pseudoinstruction` feature flag");
+            unimplemented!(
+                "Evaluating js code during pseudoinstruction expansion requires the `pseudoinstruction` feature flag"
+            );
         }
     } else {
         def.clone()

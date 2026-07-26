@@ -26,7 +26,7 @@ use regex::regex;
 
 use std::fmt::Write;
 
-use super::{expression, expression::Expr, lexer, ParseError, Span, Spanned, Token};
+use super::{ParseError, Span, Spanned, Token, expression, expression::Expr, lexer};
 use crate::architecture::{FieldType, InstructionField};
 use crate::span::FileID;
 

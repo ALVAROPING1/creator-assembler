@@ -121,14 +121,14 @@ fn run() -> Result<(), Error> {
                 .map_err(|e| Error::Compilation(e.render(&code, &src, true)))?;
             // Print AST if asked
             if verbose {
-                println!("\n\x1B[1;32m============================== AST ==============================\x1B[0m\n");
+                println!("\n\x1B[1;32m====================== AST ======================\x1B[0m\n");
                 println!("{ast:#?}");
             }
             // Compile the assembly code
             let compiled = compiler::compile(&arch, ast, &BigUint::ZERO, HashMap::new(), false)
                 .map_err(|e| Error::Compilation(e.render(&code, &src, true)))?;
             // Print the compiled code
-            println!("\n\x1B[1;32m========================= Compiled Code =========================\x1B[0m\n");
+            println!("\n\x1B[1;32m================= Compiled Code =================\x1B[0m\n");
             println!("{compiled:#?}");
         }
     }
