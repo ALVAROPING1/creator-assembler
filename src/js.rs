@@ -68,7 +68,7 @@ fn to_html(str: &str) -> String {
 
 /// Converts a number to a `JS` big integer
 #[must_use]
-fn to_js_bigint<T: num_traits::Num + ToString>(x: &T) -> BigInt {
+pub fn to_js_bigint<T: num_traits::Num + ToString>(x: &T) -> BigInt {
     BigInt::from_str(&x.to_string())
         .expect("Converting a number to string should always return a valid format")
 }

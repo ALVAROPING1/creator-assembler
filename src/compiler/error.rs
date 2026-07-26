@@ -678,48 +678,18 @@ impl crate::RenderError for Error<'_> {
 }
 
 impl Info for PseudoinstructionError {
-    fn note(&self, color: bool) -> Option<String> {
-        use PseudoinstructionErrorKind as Kind;
-        Some(match &self.kind {
-            Kind::UnknownFieldNumber { size, .. } => {
-                format!(
-                    "The pseudoinstruction has {}",
-                    ArgNum(*size, color.then_some(Color::BrightBlue))
-                )
-            }
-            _ => return None,
-        })
-    }
-
     fn label(&self, _: bool) -> String {
         use PseudoinstructionErrorKind as Kind;
         match &self.kind {
-            Kind::UnknownFieldName(..) => "Unknown field name",
-            Kind::UnknownFieldNumber { .. } => "Field index out of bounds",
-            Kind::UnknownFieldType(..) => "Unknown field type",
-            Kind::EmptyBitRange => "Empty bit range",
-            Kind::BitRangeOutOfBounds { .. } => "Bit range out of bounds",
             Kind::EvaluationError(..) => "While evaluating this code",
             Kind::ParseError { .. } => "While parsing this instruction",
         }
         .into()
     }
 
-    fn msg(&self, color: bool) -> String {
+    fn msg(&self, _: bool) -> String {
         use PseudoinstructionErrorKind as Kind;
-        let red = color.then_some(Color::Red);
         match &self.kind {
-            Kind::UnknownFieldName(s) => format!("Field {} isn't defined", Colored(s, red)),
-            Kind::UnknownFieldNumber { idx, .. } => {
-                format!("Field index {} is out of bounds", Colored(idx, red))
-            }
-            Kind::UnknownFieldType(s) => format!("Unknown field type {}", Colored(s, red)),
-            Kind::EmptyBitRange => "Bit range is empty".into(),
-            Kind::BitRangeOutOfBounds { upper_bound, msb } => format!(
-                "Bit range is of bounds, upper bound is {} but the MSB is {}",
-                Colored(upper_bound, red),
-                Colored(msb, color.then_some(Color::BrightBlue)),
-            ),
             Kind::EvaluationError(s) => format!("Error evaluating JS code:\n{s}"),
             Kind::ParseError(_) => "Error parsing instruction".into(),
         }

@@ -336,7 +336,39 @@ pub struct Pseudoinstruction<'a> {
     /// Syntax of the instruction
     #[serde(flatten)]
     pub syntax: InstructionSyntax<'a, ()>,
-    /// Code to execute for the instruction
+    /// Pseudoinstruction expansion definition. Can be either a instruction sequence template or a
+    /// `JS` function
+    ///
+    /// # Instruction Sequence Form
+    ///
+    /// A string containing a newline/semicolon separated list of assembly instructions. Each
+    /// instruction will be assembled as if it was specified by the user.
+    ///
+    /// Identifiers in sub-expressions that match the name of one of the pseudoinstruction's fields
+    /// will be automatically replaced with the corresponding argument's value. This allows
+    /// forwarding the arguments and manipulation of the arguments within expressions. Forward
+    /// references are supported when using this form.
+    ///
+    ///
+    /// # Function Form
+    ///
+    /// A `JS` function body prefixed by `js:\n`. The signature of this function should be:
+    ///
+    /// ```ts
+    /// (pc: bigint, args: Array<number | bigint | string | null>) => string
+    /// ```
+    ///
+    /// Where:
+    ///
+    /// - `pc`: address in which the pseudoinstruction is being assembled into
+    /// - `args`: array of evaluated pseudoinstruction arguments in the order they appear in the
+    ///   assembly syntax, where `number` is used for expressions that evaluate to a float,
+    ///   `bigint` for those that evaluate to an integer, `string` for simple identifiers
+    ///   (register names) and `null` for those that can't be evaluated (expressions containing
+    ///   undefined labels/forward references)
+    /// - The returned string must be the definition in instruction sequence form
+    /// - The function is allowed to throw any `JS` value that can be converted to a string, which
+    ///   will be displayed in error messages
     // Can't be a reference because there might be escape sequences, which require
     // modifying the data on deserialization
     pub definition: String,
