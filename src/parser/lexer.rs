@@ -24,7 +24,7 @@
 use chumsky::{input::WithContext, prelude::*, text::Char as _};
 use num_bigint::BigUint;
 use num_traits::Num as _;
-use std::fmt;
+use std::{fmt, str::FromStr as _};
 
 use super::{Parser, Span, Spanned};
 
@@ -135,17 +135,23 @@ impl fmt::Display for Token {
     }
 }
 
-/// Creates a lexer for integer literals
+/// Creates a lexer for number literals (integer and floating-point)
 #[must_use]
-fn int_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
+fn num_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
     static EXPECT_MSG: &str = "The parsed string should always correspond with a valid number";
 
-    // Decimal: integer not followed by a decimal part/exponent
-    let decimal = text::int(10)
-        // Disambiguate integer literals from the integer part of a floating point literal
-        .then_ignore(none_of(".eE").rewind().ignored().or(end()))
-        .from_str()
-        .map(|x| x.expect(EXPECT_MSG));
+    // Decimal literals
+    let int = text::int(10); // Integer part
+    let frac = just('.').then(text::digits(10)).ignored(); // Fractional part
+    let exp = one_of("eE").then(one_of("+-").or_not()).then(int).ignored(); // Exponent part
+
+    let number = int
+        .ignore_then(frac.or_not())
+        .then(exp.or_not())
+        .map_with(|x, e| match x {
+            (None, None) => Token::Integer(BigUint::from_str(e.slice()).expect(EXPECT_MSG)),
+            _ => Token::Float(f64::from_str(e.slice()).expect(EXPECT_MSG).into()),
+        });
 
     // Generic base N literals
     let to_int = move |x, n| BigUint::from_str_radix(x, n).expect(EXPECT_MSG);
@@ -153,44 +159,12 @@ fn int_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
     let hex = one_of("xX").ignore_then(base_n(16));
     let bin = one_of("bB").ignore_then(base_n(2));
     let octal = base_n(8);
-    let base_n = just("0").ignore_then(choice((hex, bin, octal)));
+    let base_n = just("0")
+        .ignore_then(choice((hex, bin, octal)))
+        .map(Token::Integer);
 
-    // Integer token
-    let int = base_n.or(decimal).map(Token::Integer);
-    int.labelled("integer").as_context()
-}
-
-/// Creates a lexer for floating point literals
-#[must_use]
-fn float_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
-    let int = text::int(10); // Integer part
-    let frac = just('.').then(text::digits(10)); // Fractional part
-    let exp = one_of("eE").then(one_of("+-").or_not()).then(int); // Exponent part
-
-    // Float literal: `float -> int [frac] [exp]`
-    let float = int
-        // Disambiguate integer literals from the integer part of a floating point literal
-        .then_ignore(one_of(".eE").rewind())
-        .then(frac.or_not())
-        .then(exp.or_not())
-        .to_slice()
-        .from_str()
-        .map(|res: Result<f64, _>| res.expect("We already parsed it as a float literal"));
-
-    // named constants: `inf`, `infinity`, and `nan`
-    let named_constant = text::ident().try_map(|ident: &str, span| {
-        Ok(match ident.to_lowercase().as_str() {
-            "inf" | "infinity" => f64::INFINITY,
-            "nan" => f64::NAN,
-            _ => return Err(Rich::custom(span, "Unallowed float literal")),
-        })
-    });
-
-    // Float token
-    choice((float, named_constant))
-        .map(|x| Token::Float(x.into()))
-        .labelled("float")
-        .as_context()
+    // Number token
+    choice((base_n, number)).labelled("number").as_context()
 }
 
 /// Creates a lexer for string and character literals
@@ -274,12 +248,8 @@ pub fn lexer<'src, 'arch: 'src>(
 ) -> Parser!('src, WithContext<Span, &'src str>, Vec<Spanned<Token>>) {
     let newline = text::newline().to('\n');
 
-    // Integer literals
-    let int = int_lexer();
-    // Float literals
-    let float = float_lexer();
-    // Number literals can be either integers or floats
-    let num = int.or(float);
+    // Number literals
+    let num = num_lexer();
 
     // Expression operators
     let single_char_op = select! {
@@ -348,6 +318,10 @@ pub fn lexer<'src, 'arch: 'src>(
                 Token::Label(ident)
             } else if ident.starts_with('.') && ident != "." {
                 Token::Directive(ident)
+            } else if ident.eq_ignore_ascii_case("inf") || ident.eq_ignore_ascii_case("infinity") {
+                Token::Float(f64::INFINITY.into())
+            } else if ident.eq_ignore_ascii_case("nan") {
+                Token::Float(f64::NAN.into())
             } else {
                 Token::Identifier(ident)
             }
