@@ -290,16 +290,14 @@ pub fn lexer<'src, 'arch: 'src>(
         .map(Token::Ctrl)
         .labelled("control character");
 
-    // Other literal punctuation characters. This should be the last option if all other patterns
-    // fail, so we don't need to be too specific to avoid ambiguities with other patterns
-    let literal = any()
-        .filter(|c: &char| !(c.is_ascii_alphanumeric() || "\"'_.".contains(*c)))
-        .map(Token::Literal)
-        .labelled("literal");
+    // Other literal punctuation characters. This should be the last option if all other symbol
+    // patterns fail, so we don't need to be too specific to avoid ambiguities with other patterns
+    let literal = any().map(Token::Literal).labelled("literal");
 
     // Generic identifiers
+    let is_ident_prefix = |c: &char| c.is_ascii_alphabetic() || "_.".contains(*c);
     let ident = any()
-        .filter(|c: &char| c.is_ascii_alphabetic() || "_.".contains(*c))
+        .filter(is_ident_prefix)
         .then(
             any()
                 .filter(|c: &char| c.is_ascii_alphanumeric() || "_.".contains(*c))
@@ -331,7 +329,13 @@ pub fn lexer<'src, 'arch: 'src>(
     let (string, character) = str_lexer();
 
     // Any of the previous patterns can be a token
-    let token = choice((op, ctrl, num, identifier, string, character, literal));
+    let token = custom(move |inp| match inp.peek() {
+        Some('\'') => inp.parse(character.clone()),
+        Some('"') => inp.parse(string.clone()),
+        Some(x) if x.is_ascii_digit() => inp.parse(num.clone()),
+        Some(x) if is_ident_prefix(&x) => inp.parse(identifier),
+        _ => inp.parse(choice((op, ctrl, literal))),
+    });
 
     // Comments
     let line_comment = just(comment_prefix)
