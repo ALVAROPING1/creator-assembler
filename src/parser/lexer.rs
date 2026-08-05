@@ -155,12 +155,19 @@ fn num_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
 
     // Generic base N literals
     let to_int = move |x, n| BigUint::from_str_radix(x, n).expect(EXPECT_MSG);
-    let base_n = |n| text::digits(n).to_slice().map(move |x| to_int(x, n));
-    let hex = one_of("xX").ignore_then(base_n(16));
-    let bin = one_of("bB").ignore_then(base_n(2));
-    let octal = base_n(8);
+    let base_n = move |n| text::digits(n).to_slice().map(move |x| to_int(x, n));
     let base_n = just("0")
-        .ignore_then(choice((hex, bin, octal)))
+        .ignore_then(custom(move |inp| {
+            let before = inp.save();
+            match inp.next() {
+                Some('x' | 'X') => inp.parse(base_n(16)),
+                Some('b' | 'B') => inp.parse(base_n(2)),
+                _ => {
+                    inp.rewind(before);
+                    inp.parse(base_n(8))
+                }
+            }
+        }))
         .map(Token::Integer);
 
     // Number token
@@ -176,26 +183,27 @@ fn str_lexer<'src>() -> (
     Parser!('src, WithContext<Span, &'src str>, Token),
 ) {
     // Escape sequences in strings
-    let escape = just('\\').ignore_then(
-        choice((
-            just('\\'),
-            just('"'),
-            just('\''),
-            just('a').to('\x07'),
-            just('b').to('\x08'),
-            just('e').to('\x1B'),
-            just('f').to('\x0C'),
-            just('n').to('\n'),
-            just('r').to('\r'),
-            just('t').to('\t'),
-            just('0').to('\0'),
-        ))
-        .map_err(|e: Rich<'_, char, Span>| {
-            let mut s = *e.span();
-            s.start -= 1; // Include the `\` prefix in the span
-            Rich::custom(s, "Invalid escape sequence")
-        }),
-    );
+    let escape = just('\\').ignore_then(custom(|inp| {
+        let cursor = inp.cursor();
+        Ok(match inp.next() {
+            Some('\\') => '\\',
+            Some('"') => '"',
+            Some('\'') => '\'',
+            Some('a') => '\x07',
+            Some('b') => '\x08',
+            Some('e') => '\x1B',
+            Some('f') => '\x0C',
+            Some('n') => '\n',
+            Some('r') => '\r',
+            Some('t') => '\t',
+            Some('0') => '\0',
+            _ => {
+                let mut s: Span = inp.span_since(&cursor);
+                s.start -= 1; // Include the `\` prefix in the span
+                return Err(Rich::custom(s, "Invalid escape sequence"));
+            }
+        })
+    }));
 
     // Characters allowed inside string/character literals: anything that isn't their delimiter,
     // a backslash, or a new line
@@ -348,12 +356,19 @@ pub fn lexer<'src, 'arch: 'src>(
         .filter(|c: &char| c.is_whitespace() && !c.is_newline())
         .ignored();
 
-    let padding = choice((line_comment, multiline_comment, whitespace)).repeated();
+    let is_comment_prefix = |x| comment_prefix.chars().next().is_some_and(|c| c == x);
+    let padding = custom(move |inp| match inp.peek() {
+        // NOTE: if there is ambiguity between line and multiline comments, we have to try both
+        Some('/') if is_comment_prefix('/') => inp.parse(choice((line_comment, multiline_comment))),
+        Some(x) if is_comment_prefix(x) => inp.parse(line_comment),
+        Some('/') => inp.parse(multiline_comment),
+        _ => inp.parse(whitespace),
+    });
 
     // Definition of a token
     token
         .map_with(|tok, e| (tok, e.span()))
-        .separated_by(padding)
+        .separated_by(padding.repeated())
         .allow_leading()
         .allow_trailing()
         .collect()
