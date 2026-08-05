@@ -119,38 +119,35 @@ impl Instruction {
             .into_iter()
             .map(|(tok, _)| tok); // We don't need the token spans
 
-        // Creates an initial dummy parser that consumes no input
-        let parser = any().ignored().or(end()).rewind();
         let mut syntax = String::with_capacity(fmt.len());
-        // Validate the first token is a field placeholder pointing to the opcode/instruction name
-        let mut parser = parser
-            .to(match tokens.next() {
-                // First token is a placeholder => check that it points to the opcode field
-                Some(Token::Identifier(ident)) if field_re.is_match(&ident) => {
-                    let i = field(ident, false)?;
-                    match fields[i].r#type {
-                        FieldType::Co => {
-                            write!(syntax, "{} ", fields[i].name).expect(WRITE_EXPECT);
-                            // NOTE: This value should never be read, we only need it to point to the
-                            // opcode instruction field
-                            vec![ParsedArgument {
-                                value: (Expr::Integer(0u8.into()), crate::span::DEFAULT_SPAN),
-                                field_idx: i,
-                            }]
-                        }
-                        _ => return Err("the first field should have type `co`"),
+        let args = match tokens.next() {
+            // First token is a placeholder => check that it points to the opcode field
+            Some(Token::Identifier(ident)) if field_re.is_match(&ident) => {
+                let i = field(ident, false)?;
+                match fields[i].r#type {
+                    FieldType::Co => {
+                        write!(syntax, "{} ", fields[i].name).expect(WRITE_EXPECT);
+                        // NOTE: This value should never be read, we only need it to point to the
+                        // opcode instruction field
+                        vec![ParsedArgument {
+                            value: (Expr::Integer(0u8.into()), crate::span::DEFAULT_SPAN),
+                            field_idx: i,
+                        }]
                     }
+                    _ => return Err("the first field should have type `co`"),
                 }
-                // First token is an identifier => assume it's the instruction name
-                // There is no opcode field specification => assume it shouldn't be included in the
-                // output
-                Some(Token::Identifier(_)) => {
-                    syntax.push_str("opcode ");
-                    vec![]
-                }
-                _ => return Err("unexpected first token of signature definition"),
-            })
-            .boxed();
+            }
+            // First token is an identifier => assume it's the instruction name
+            // There is no opcode field specification => assume it shouldn't be included in the
+            // output
+            Some(Token::Identifier(_)) => {
+                syntax.push_str("opcode ");
+                vec![]
+            }
+            _ => return Err("unexpected first token of signature definition"),
+        };
+        // Validate the first token is a field placeholder pointing to the opcode/instruction name
+        let mut parser = custom(move |_| Ok(args.clone())).boxed();
 
         // Iterate through the remaining tokens
         let mut prev_symbol = true;
