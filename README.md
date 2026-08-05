@@ -1,7 +1,19 @@
 # CREATOR Assembler
 
-Reimplementation of the assembler used by [CREATOR](https://creatorsim.github.io/)
-to have better performance, more helpful error messages, and a more correct output.
+[CREATOR](https://creatorsim.github.io/)'s generic assembler
+
+![Example diagnostics](./img/example.png)
+
+## Features
+
+- **Configurable ISA** through an architecture configuration file.
+- **Constant expression support**, allowing arithmetic (`+`, `-`, `*`, `/`, `%`,
+  `<<`, `>>`), bitwise (`|`, `&`, `^`, `~`), logical (`&&`, `||`), and comparison
+  (`<`, `<=`, `==`, `!=`, `>=`, `>`) operators.
+- **Labels as values** in expressions.
+- **Custom expression modifier** support (`%<name>(<expression>)`).
+- **User-friendly error messages**.
+- **Wasm support** with JavaScript bindings.
 
 ## Building
 
