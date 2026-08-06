@@ -135,6 +135,14 @@ impl fmt::Display for Token {
     }
 }
 
+/// Skips the next token of an input and returns the expression
+macro_rules! skip_ret {
+    ($inp:expr, $e:expr) => {{
+        $inp.skip();
+        $e
+    }};
+}
+
 /// Creates a lexer for number literals (integer and floating-point)
 #[must_use]
 fn num_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
@@ -157,16 +165,10 @@ fn num_lexer<'src>() -> Parser!('src, WithContext<Span, &'src str>, Token) {
     let to_int = move |x, n| BigUint::from_str_radix(x, n).expect(EXPECT_MSG);
     let base_n = move |n| text::digits(n).to_slice().map(move |x| to_int(x, n));
     let base_n = just("0")
-        .ignore_then(custom(move |inp| {
-            let before = inp.save();
-            match inp.next() {
-                Some('x' | 'X') => inp.parse(base_n(16)),
-                Some('b' | 'B') => inp.parse(base_n(2)),
-                _ => {
-                    inp.rewind(before);
-                    inp.parse(base_n(8))
-                }
-            }
+        .ignore_then(custom(move |inp| match inp.peek() {
+            Some('x' | 'X') => skip_ret!(inp, inp.parse(base_n(16))),
+            Some('b' | 'B') => skip_ret!(inp, inp.parse(base_n(2))),
+            _ => inp.parse(base_n(8)),
         }))
         .map(Token::Integer);
 
@@ -260,37 +262,34 @@ pub fn lexer<'src, 'arch: 'src>(
     let num = num_lexer();
 
     // Expression operators
-    let single_char_op = select! {
-        '+' => Operator::Plus,
-        '-' => Operator::Minus,
-        '*' => Operator::Star,
-        '/' => Operator::Slash,
-        '%' => Operator::Percent,
-        '|' => Operator::Or,
-        '&' => Operator::And,
-        '^' => Operator::Caret,
-        '~' => Operator::Tilde,
-        '>' => Operator::Gt,
-        '<' => Operator::Lt,
-    };
-    let double_char_op = any().repeated().exactly(2).to_slice().try_map(|op, span| {
-        match op {
-            ">=" => Ok(Operator::Ge),
-            "<=" => Ok(Operator::Le),
-            "!=" => Ok(Operator::Ne),
-            "==" => Ok(Operator::Eq),
-            "&&" => Ok(Operator::LogicalAnd),
-            "||" => Ok(Operator::LogicalOr),
-            "<<" => Ok(Operator::Shl),
-            ">>" => Ok(Operator::Shr),
+    let op = custom(|inp| {
+        let cursor = inp.cursor();
+        Ok(Token::Operator(match (inp.next(), inp.peek()) {
+            (Some('>'), Some('=')) => skip_ret!(inp, Operator::Ge),
+            (Some('<'), Some('=')) => skip_ret!(inp, Operator::Le),
+            (Some('!'), Some('=')) => skip_ret!(inp, Operator::Ne),
+            (Some('='), Some('=')) => skip_ret!(inp, Operator::Eq),
+            (Some('&'), Some('&')) => skip_ret!(inp, Operator::LogicalAnd),
+            (Some('|'), Some('|')) => skip_ret!(inp, Operator::LogicalOr),
+            (Some('<'), Some('<')) => skip_ret!(inp, Operator::Shl),
+            (Some('>'), Some('>')) => skip_ret!(inp, Operator::Shr),
+            (Some('+'), _) => Operator::Plus,
+            (Some('-'), _) => Operator::Minus,
+            (Some('*'), _) => Operator::Star,
+            (Some('/'), _) => Operator::Slash,
+            (Some('%'), _) => Operator::Percent,
+            (Some('|'), _) => Operator::Or,
+            (Some('&'), _) => Operator::And,
+            (Some('^'), _) => Operator::Caret,
+            (Some('~'), _) => Operator::Tilde,
+            (Some('>'), _) => Operator::Gt,
+            (Some('<'), _) => Operator::Lt,
             // Use a generic error if we don't match a valid operator. The characters can always be
             // lexed as a combination of other tokens so this will never appear in the output
-            _ => Err(Rich::custom(span, "unknown operator")),
-        }
-    });
-    let op = choice((double_char_op, single_char_op))
-        .map(Token::Operator)
-        .labelled("operator");
+            _ => return Err(Rich::custom(inp.span_since(&cursor), "unknown operator")),
+        }))
+    })
+    .labelled("operator");
 
     // Control characters used in the grammar
     let ctrl = one_of(",()")
