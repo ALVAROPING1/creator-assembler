@@ -185,27 +185,25 @@ fn str_lexer<'src>() -> (
     Parser!('src, WithContext<Span, &'src str>, Token),
 ) {
     // Escape sequences in strings
-    let escape = just('\\').ignore_then(custom(|inp| {
-        let cursor = inp.cursor();
-        Ok(match inp.next() {
-            Some('\\') => '\\',
-            Some('"') => '"',
-            Some('\'') => '\'',
-            Some('a') => '\x07',
-            Some('b') => '\x08',
-            Some('e') => '\x1B',
-            Some('f') => '\x0C',
-            Some('n') => '\n',
-            Some('r') => '\r',
-            Some('t') => '\t',
-            Some('0') => '\0',
-            _ => {
-                let mut s: Span = inp.span_since(&cursor);
-                s.start -= 1; // Include the `\` prefix in the span
-                return Err(Rich::custom(s, "Invalid escape sequence"));
-            }
-        })
-    }));
+    let escape = select! {
+        '\\' => '\\',
+        '"' => '"',
+        '\'' => '\'',
+        'a' => '\x07',
+        'b' => '\x08',
+        'e' => '\x1B',
+        'f' => '\x0C',
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        '0' => '\0',
+    }
+    .map_err(|e: Rich<'_, char, Span>| {
+        let mut s: Span = *e.span();
+        s.start -= 1; // Include the `\` prefix in the span
+        Rich::custom(s, "Invalid escape sequence")
+    });
+    let escape = just('\\').ignore_then(escape);
 
     // Characters allowed inside string/character literals: anything that isn't their delimiter,
     // a backslash, or a new line
