@@ -276,7 +276,6 @@ impl PartialOrd for Number {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
     use super::*;
     use crate::span::{DEFAULT_SPAN, test::*};

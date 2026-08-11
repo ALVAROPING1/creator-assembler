@@ -290,7 +290,6 @@ impl std::fmt::Debug for Instruction {
     }
 }
 
-#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
     use super::*;

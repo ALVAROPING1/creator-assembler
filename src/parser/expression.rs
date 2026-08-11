@@ -343,7 +343,6 @@ mod test {
                 Err(ErrorKind::UnknownLabel(ident.to_owned()))
             }
         };
-        #[allow(clippy::unwrap_used)]
         let modifier = |range: (u64, Option<u64>), lower_signed, output_signed| Modifier {
             range: range.try_into().unwrap(),
             lower_signed,

@@ -13,7 +13,7 @@ default with an installation of rust.
 To format the code, use `cargo fmt`. To run the linter, use:
 
 ```sh
-cargo clippy -- -W clippy::pedantic -W clippy::nursery -W clippy::unwrap_used --no-deps
+cargo clippy
 ```
 
 ## Pull Request

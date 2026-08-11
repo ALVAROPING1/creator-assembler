@@ -114,7 +114,6 @@ impl std::fmt::Display for Integer {
     }
 }
 
-#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
     use super::{ErrorKind, Integer, IntegerType};

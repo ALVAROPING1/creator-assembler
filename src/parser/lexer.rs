@@ -372,7 +372,6 @@ pub fn lexer<'src, 'arch: 'src>(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test {
     use chumsky::label::LabelError;
 
