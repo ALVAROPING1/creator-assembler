@@ -26,18 +26,29 @@ use super::Token;
 use crate::error_rendering::{Colored, DisplayList};
 use crate::span::Span;
 
+/// Char wrapper which uses [`char::escape_debug()`] as its [`std::fmt::Display`] implementation
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct DebugChar(pub char);
+
+impl std::fmt::Display for DebugChar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.escape_debug())
+    }
+}
+
 /// Error representing a syntax error during parsing
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Error {
     /// The error happened during the lexing stage
-    Lexer(Vec<Rich<'static, char, Span>>),
+    Lexer(Vec<Rich<'static, DebugChar, Span>>),
     /// The error happened during the parsing stage
     Parser(Vec<Rich<'static, Token, Span>>),
 }
 
 impl<'src> From<Vec<Rich<'src, char, Span>>> for Error {
     fn from(value: Vec<Rich<'src, char, Span>>) -> Self {
-        Self::Lexer(value.into_iter().map(Rich::into_owned).collect())
+        let map = |e| Rich::into_owned(e).map_token(DebugChar);
+        Self::Lexer(value.into_iter().map(map).collect())
     }
 }
 
