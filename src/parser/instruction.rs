@@ -96,7 +96,7 @@ impl Instruction {
         let field_re = regex!(r"^[fF][0-9]+$");
 
         // Gets the field number the placeholder points to and validates that it has a correct type
-        let field = |ident: String, no_co: bool| -> Result<usize, _> {
+        let field = |ident: String, no_co| {
             let i: usize = number(&ident);
             fields
                 .get(i)
@@ -104,7 +104,7 @@ impl Instruction {
                 .and_then(|field| match field.r#type {
                     FieldType::Cop { .. } => Err("unallowed reference to cop field"),
                     FieldType::Co if no_co => Err("unallowed reference to co field"),
-                    _ => Ok(i),
+                    _ => Ok((i, field)),
                 })
         };
 
@@ -123,10 +123,10 @@ impl Instruction {
         let args = match tokens.next() {
             // First token is a placeholder => check that it points to the opcode field
             Some(Token::Identifier(ident)) if field_re.is_match(&ident) => {
-                let i = field(ident, false)?;
-                match fields[i].r#type {
+                let (i, field) = field(ident, false)?;
+                match field.r#type {
                     FieldType::Co => {
-                        write!(syntax, "{} ", fields[i].name).expect(WRITE_EXPECT);
+                        write!(syntax, "{} ", field.name).expect(WRITE_EXPECT);
                         // NOTE: This value should never be read, we only need it to point to the
                         // opcode instruction field
                         vec![ParsedArgument {
@@ -156,11 +156,11 @@ impl Instruction {
             parser = match token {
                 // The current token is an argument placeholder => parse an expression/identifier
                 Token::Identifier(ident) if field_re.is_match(&ident) => {
-                    let field_idx = field(ident, true)?; // Validate the field pointed to
+                    let (field_idx, field) = field(ident, true)?; // Validate the field pointed to
                     if !prev_symbol {
                         syntax.push(' ');
                     }
-                    write!(syntax, "{}", fields[field_idx].name).expect(WRITE_EXPECT);
+                    write!(syntax, "{}", field.name).expect(WRITE_EXPECT);
                     prev_symbol = false;
                     parser
                         .then(expression::parser())
