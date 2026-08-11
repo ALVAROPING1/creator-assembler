@@ -507,6 +507,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::decimal_bitwise_operands)]
     fn bitor() {
         let op = |a: &Number, b: &Number| a.clone() | b.clone();
         let opint = |a: BigInt, b: BigInt| op(&Number::from(a), &Number::from(b));
@@ -533,6 +534,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::decimal_bitwise_operands)]
     fn bitand() {
         let op = |a: &Number, b: &Number| a.clone() & b.clone();
         let opint = |a: BigInt, b: BigInt| op(&Number::from(a), &Number::from(b));
@@ -567,6 +569,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::decimal_bitwise_operands)]
     fn bitxor() {
         let op = |a: &Number, b: &Number| a.clone() ^ b.clone();
         let opint = |a: BigInt, b: BigInt| op(&Number::from(a), &Number::from(b));

@@ -527,7 +527,7 @@ impl Info for Error<'_> {
                     .as_ref()
                     .map_or_else(|| "None".into(), |(s, _)| s.to_string());
                 let section = Colored(section, blue);
-                format!("Can't use {found} statements while in section {section}",)
+                format!("Can't use {found} statements while in section {section}")
             }
             Kind::UnallowedLabel => "Can't use labels in literal expressions".into(),
             Kind::UnallowedFloat(..) => {
