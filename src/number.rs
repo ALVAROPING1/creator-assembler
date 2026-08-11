@@ -248,8 +248,7 @@ impl Number {
             Self::Float { value, .. } => value.to_bits().into(),
         };
         // Discard the bits below the range, if any
-        if modifier.range.start > 0 {
-            let lower = modifier.range.start - 1;
+        if let Some(lower) = modifier.range.start.checked_sub(1) {
             let inc = modifier.lower_signed && x.bit(lower);
             x = (x >> modifier.range.start) + u8::from(inc);
         }
